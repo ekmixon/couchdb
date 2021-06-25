@@ -73,6 +73,7 @@ partitioned_shards_recreated_properly(#{dbname := DbName, dbdoc := DbDoc}) ->
         ok = with_proc(fun() -> couch_server:delete(ShardName, []) end),
         ?assertThrow({not_found, no_db_file}, is_partitioned(Shard)),
         ok = mem3_util:write_db_doc(DbDoc#doc{body = {Body1}}),
+        timer:sleep(500),
         Shards = [Shard|_] = lists:reverse(mem3:shards(DbName)),
         timer:sleep(5000),
         ?assert(is_partitioned(Shard))
