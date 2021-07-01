@@ -358,8 +358,7 @@ changes_callback({change, {Change}, _}, _) ->
                 ets:insert(?OPENERS, {DbName, Writer}),
                 Msg = {cache_insert_change, DbName, Writer, Seq},
                 gen_server:cast(?MODULE, Msg),
-                Opts = mem3_util:get_shard_opts(Doc),
-                [create_if_missing(mem3:name(S), Opts) || S
+                [create_if_missing(mem3:name(S)) || S
                     <- Shards, mem3:node(S) =:= node()]
             end
         end
@@ -409,11 +408,12 @@ in_range(Shard, HashKey) ->
     [B, E] = mem3:range(Shard),
     B =< HashKey andalso HashKey =< E.
 
-create_if_missing(Name, Options) ->
+create_if_missing(Name) ->
     case couch_server:exists(Name) of
         true ->
             ok;
         false ->
+            Options = mem3_util:get_shard_opts(Doc),
             case couch_server:create(Name, [?ADMIN_CTX] ++ Options) of
             {ok, Db} ->
                 couch_db:close(Db);

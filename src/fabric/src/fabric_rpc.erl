@@ -439,7 +439,7 @@ get_node_seqs(Db, Nodes) ->
 
 
 get_or_create_db(DbName, Options) ->
-    mem3_util:get_or_create_db(DbName, Options).
+    mem3_util:get_or_create_db_int(DbName, Options).
 
 
 get_view_cb(#mrargs{extra = Options}) ->
