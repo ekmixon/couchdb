@@ -408,18 +408,18 @@ in_range(Shard, HashKey) ->
     [B, E] = mem3:range(Shard),
     B =< HashKey andalso HashKey =< E.
 
-create_if_missing(Name) ->
-    case couch_server:exists(Name) of
+create_if_missing(ShardName) ->
+    case couch_server:exists(ShardName) of
         true ->
             ok;
         false ->
-            Options = mem3_util:get_shard_opts(Doc),
-            case couch_server:create(Name, [?ADMIN_CTX] ++ Options) of
+            Options = mem3_util:get_shard_props(ShardName),
+            case couch_server:create(ShardName, [?ADMIN_CTX] ++ Options) of
             {ok, Db} ->
                 couch_db:close(Db);
             Error ->
                 couch_log:error("~p tried to create ~s, got ~p",
-                    [?MODULE, Name, Error])
+                    [?MODULE, ShardName, Error])
             end
     end.
 
