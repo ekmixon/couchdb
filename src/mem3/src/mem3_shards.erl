@@ -46,7 +46,8 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
-opts_for_db(DbName) ->
+opts_for_db(DbName0) ->
+    DbName = mem3:dbname(DbName0),
     {ok, Db} = mem3_util:ensure_exists(mem3_sync:shards_db()),
     case couch_db:open_doc(Db, DbName, [ejson_body]) of
         {ok, #doc{body = {Props}}} ->
@@ -413,7 +414,7 @@ create_if_missing(ShardName) ->
         true ->
             ok;
         false ->
-            Options = mem3_util:get_shard_props(ShardName),
+            Options = opts_for_db(ShardName),
             case couch_server:create(ShardName, [?ADMIN_CTX] ++ Options) of
             {ok, Db} ->
                 couch_db:close(Db);
