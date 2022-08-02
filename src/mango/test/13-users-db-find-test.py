@@ -18,7 +18,7 @@ import mango, requests, unittest
 
 class UsersDbFindTests(mango.UsersDbTests):
     @classmethod
-    def setUpClass(klass):
+    def setUpClass(cls):
         raise unittest.SkipTest("Re-enable once the _users db is implemented")
 
     def test_simple_find(self):

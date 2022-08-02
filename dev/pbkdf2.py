@@ -40,6 +40,7 @@
     :copyright: (c) Copyright 2011 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
+
 from binascii import hexlify
 import hmac
 import hashlib
@@ -53,33 +54,20 @@ PY3 = sys.version_info[0] == 3
 if not PY3:
     from itertools import izip as zip
 
-if PY3:
-    text_type = str
-else:
-    text_type = unicode
-
-
+text_type = str if PY3 else unicode
 _pack_int = Struct(">I").pack
 
 
 def bytes_(s, encoding="utf8", errors="strict"):
-    if isinstance(s, text_type):
-        return s.encode(encoding, errors)
-    return s
+    return s.encode(encoding, errors) if isinstance(s, text_type) else s
 
 
 def hexlify_(s):
-    if PY3:
-        return str(hexlify(s), encoding="utf8")
-    else:
-        return s.encode("hex")
+    return str(hexlify(s), encoding="utf8") if PY3 else s.encode("hex")
 
 
 def range_(*args):
-    if PY3:
-        return range(*args)
-    else:
-        return xrange(*args)
+    return range(*args) if PY3 else xrange(*args)
 
 
 def pbkdf2_hex(data, salt, iterations=1000, keylen=24, hashfunc=None):
@@ -99,25 +87,16 @@ def pbkdf2_bin(data, salt, iterations=1000, keylen=24, hashfunc=None):
     def _pseudorandom(x, mac=mac):
         h = mac.copy()
         h.update(bytes_(x))
-        if PY3:
-            return [x for x in h.digest()]
-        else:
-            return map(ord, h.digest())
+        return list(h.digest()) if PY3 else map(ord, h.digest())
 
     buf = []
     for block in range_(1, -(-keylen // mac.digest_size) + 1):
         rv = u = _pseudorandom(bytes_(salt) + _pack_int(block))
         for i in range_(iterations - 1):
-            if PY3:
-                u = _pseudorandom(bytes(u))
-            else:
-                u = _pseudorandom("".join(map(chr, u)))
+            u = _pseudorandom(bytes(u)) if PY3 else _pseudorandom("".join(map(chr, u)))
             rv = starmap(xor, zip(rv, u))
         buf.extend(rv)
-    if PY3:
-        return bytes(buf)[:keylen]
-    else:
-        return "".join(map(chr, buf))[:keylen]
+    return bytes(buf)[:keylen] if PY3 else "".join(map(chr, buf))[:keylen]
 
 
 def test():
@@ -127,11 +106,11 @@ def test():
         rv = pbkdf2_hex(data, salt, iterations, keylen)
         if rv != expected:
             print("Test failed:")
-            print("  Expected:   %s" % expected)
-            print("  Got:        %s" % rv)
+            print(f"  Expected:   {expected}")
+            print(f"  Got:        {rv}")
             print("  Parameters:")
-            print("    data=%s" % data)
-            print("    salt=%s" % salt)
+            print(f"    data={data}")
+            print(f"    salt={salt}")
             print("    iterations=%d" % iterations)
             failed.append(1)
 

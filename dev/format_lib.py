@@ -34,8 +34,7 @@ def get_source_paths():
         if item_path.suffix != ".erl":
             continue
 
-        result_dict = {
+        yield {
             "raw_path": item,
             "item_path": item_path,
         }
-        yield result_dict

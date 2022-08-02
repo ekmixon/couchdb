@@ -66,7 +66,7 @@ def log(msg):
             argnames = list(inspect.signature(func).parameters.keys())
             callargs = dict(list(zip(argnames, args)))
             callargs.update(kwargs)
-            print_("[ * ] " + msg.format(**callargs) + " ... ")
+            print_(f"[ * ] {msg.format(**callargs)} ... ")
             try:
                 res = func(*args, **kwargs)
             except KeyboardInterrupt:
@@ -298,13 +298,14 @@ def setup_configs(ctx):
             "view_index_dir": toposixpath(
                 ensure_dir_exists(ctx["devdir"], "lib", node, "data")
             ),
-            "node_name": "-name %s@127.0.0.1" % node,
+            "node_name": f"-name {node}@127.0.0.1",
             "cluster_port": cluster_port,
             "backend_port": backend_port,
             "prometheus_port": prometheus_port,
             "uuid": "fake_uuid_for_dev",
             "_default": "",
         }
+
         write_config(ctx, node, env)
         write_locald_configs(ctx, node, env)
     generate_haproxy_config(ctx)
@@ -333,8 +334,7 @@ def generate_haproxy_config(ctx):
 
     out = []
     for line in config:
-        match = re.match("(.*?)<<(.*?)>>(.*?)", line, re.S)
-        if match:
+        if match := re.match("(.*?)<<(.*?)>>(.*?)", line, re.S):
             prefix, template, suffix = match.groups()
             for node in ctx["nodes"]:
                 node_idx = int(node.replace("node", ""))
@@ -354,7 +354,7 @@ def apply_config_overrides(ctx, content):
         key, val = kv_str.split("=")
         key, val = key.strip(), val.strip()
         match = "[;=]{0,2}%s.*" % key
-        repl = "%s = %s" % (key, val)
+        repl = f"{key} = {val}"
         content = re.sub(match, repl, content)
     return content
 
@@ -382,7 +382,7 @@ def get_available_ports(num):
 
 
 def get_node_config(ctx, node_idx):
-    node = "node{}".format(node_idx)
+    node = f"node{node_idx}"
     config_dir = os.path.join(ctx["devdir"], "lib", node, "etc")
     config = ConfigParser()
     config.read(
@@ -459,7 +459,7 @@ def hack_default_ini(ctx, node, contents):
             contents,
             flags=re.MULTILINE,
         )
-    contents = re.sub("n=3", "n=%s" % ctx["N"], contents)
+    contents = re.sub("n=3", f'n={ctx["N"]}', contents)
     return contents
 
 
@@ -500,7 +500,7 @@ def hashify(pwd, salt=COMMON_SALT, iterations=10, keylen=20):
     -pbkdf2-99eb34d97cdaa581e6ba7b5386e112c265c5c670,d1d2d4d8909c82c81b6c8184429a0739,10
     """
     derived_key = pbkdf2_hex(pwd, salt, iterations, keylen)
-    return "-pbkdf2-%s,%s,%s" % (derived_key, salt, iterations)
+    return f"-pbkdf2-{derived_key},{salt},{iterations}"
 
 
 def startup(ctx):
@@ -526,7 +526,7 @@ def kill_processes(ctx):
 def degrade_cluster(ctx):
     if ctx["with_haproxy"]:
         haproxy_proc = ctx["procs"].pop()
-    for i in range(0, ctx["degrade_cluster"]):
+    for _ in range(ctx["degrade_cluster"]):
         proc = ctx["procs"].pop()
         if proc is not None:
             kill_process(proc)
@@ -549,7 +549,7 @@ def boot_nodes(ctx):
 
 
 def ensure_all_nodes_alive(ctx):
-    status = dict((num, False) for num in list(range(ctx["N"])))
+    status = {num: False for num in list(range(ctx["N"]))}
     for _ in range(10):
         for num in range(ctx["N"]):
             if status[num]:
@@ -602,8 +602,8 @@ def set_boot_env(ctx):
     mainjs = os.path.join(ctx["rootdir"], "share", "server", "main.js")
     coffeejs = os.path.join(ctx["rootdir"], "share", "server", "main-coffee.js")
 
-    qs_javascript = toposixpath("%s %s" % (couchjs, mainjs))
-    qs_coffescript = toposixpath("%s %s" % (couchjs, coffeejs))
+    qs_javascript = toposixpath(f"{couchjs} {mainjs}")
+    qs_coffescript = toposixpath(f"{couchjs} {coffeejs}")
 
     os.environ["COUCHDB_QUERY_SERVER_JAVASCRIPT"] = qs_javascript
     os.environ["COUCHDB_QUERY_SERVER_COFFEESCRIPT"] = qs_coffescript
@@ -638,11 +638,8 @@ def boot_node(ctx, node):
         ctx["devdir"],
         "-s monitor_parent",
     ]
-    if ctx["reset_logs"]:
-        mode = "wb"
-    else:
-        mode = "r+b"
-    logfname = os.path.join(ctx["devdir"], "logs", "%s.log" % node)
+    mode = "wb" if ctx["reset_logs"] else "r+b"
+    logfname = os.path.join(ctx["devdir"], "logs", f"{node}.log")
     log = open(logfname, mode)
     if "extra_args" in ctx and ctx["extra_args"]:
         cmd += ctx["extra_args"].split(" ")
@@ -750,7 +747,7 @@ def finish_cluster(port, user, pswd):
 
 
 def basic_auth_header(user, pswd):
-    return "Basic " + base64.b64encode((user + ":" + pswd).encode()).decode()
+    return "Basic " + base64.b64encode(f"{user}:{pswd}".encode()).decode()
 
 
 def generate_cookie():
@@ -766,7 +763,7 @@ def cluster_setup_with_admin_party(ctx):
 def connect_nodes(ctx):
     host, port = "127.0.0.1", backend_port(ctx, 1)
     for node in ctx["nodes"]:
-        path = "/_nodes/%s@127.0.0.1" % node
+        path = f"/_nodes/{node}@127.0.0.1"
         try_request(
             host,
             port,
@@ -788,7 +785,7 @@ def try_request(
         if resp.status in success_codes:
             return resp.status, resp.read()
         elif retries <= 0:
-            assert resp.status in success_codes, "%s%s" % (error, resp.read())
+            assert resp.status in success_codes, f"{error}{resp.read()}"
         retries -= 1
         time.sleep(retry_dt)
 
@@ -796,14 +793,14 @@ def try_request(
 def create_system_databases(host, port):
     for dbname in ["_users", "_replicator"]:
         conn = httpclient.HTTPConnection(host, port)
-        conn.request("HEAD", "/" + dbname)
+        conn.request("HEAD", f"/{dbname}")
         resp = conn.getresponse()
         if resp.status == 404:
             try_request(
                 host,
                 port,
                 "PUT",
-                "/" + dbname,
+                f"/{dbname}",
                 (201, 202, 412),
                 error="Failed to create '%s' database:\n" % dbname,
             )
@@ -827,17 +824,16 @@ def join(ctx, lead_port, user, password):
 def run_command(ctx, cmd):
     if ctx["no_eval"]:
         p = sp.Popen(cmd, shell=True)
-        p.wait()
-        exit(p.returncode)
     else:
         p = sp.Popen(cmd, shell=True, stdout=sp.PIPE, stderr=sys.stderr)
         while True:
-            line = p.stdout.readline()
-            if not line:
+            if line := p.stdout.readline():
+                eval(line)
+            else:
                 break
-            eval(line)
-        p.wait()
-        exit(p.returncode)
+
+    p.wait()
+    exit(p.returncode)
 
 
 @log("Restart all nodes")
@@ -849,7 +845,5 @@ def reboot_nodes(ctx):
 
 
 if __name__ == "__main__":
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         main()
-    except KeyboardInterrupt:
-        pass

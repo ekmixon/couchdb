@@ -206,7 +206,7 @@ class BasicFindTests(mango.UserDocsTests):
             sort=[{"company": "desc"}, {"manager": "desc"}],
         )
 
-        companies_returned = list(d["company"] for d in docs)
+        companies_returned = [d["company"] for d in docs]
         desc_companies = sorted(companies_returned, reverse=True)
         self.assertEqual(desc_companies, companies_returned)
 

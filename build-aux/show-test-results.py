@@ -17,10 +17,7 @@ TEST_COLLECTIONS = {
 
 
 def _attrs(elem):
-    ret = {}
-    for (k, v) in elem.attributes.items():
-        ret[k.lower()] = v
-    return ret
+    return {k.lower(): v for k, v in elem.attributes.items()}
 
 
 def _text(elem):
@@ -80,9 +77,7 @@ class TestCase(object):
         klass = attrs.get("classname", "")
         if klass.startswith("Elixir."):
             klass = klass[len("Elixir.") :]
-        if klass:
-            return "%s - %s" % (klass, attrs["name"])
-        return attrs["name"]
+        return f'{klass} - {attrs["name"]}' if klass else attrs["name"]
 
 
 class TestSuite(object):
@@ -119,8 +114,7 @@ class TestSuite(object):
     def _name(self, attrs):
         raw_name = attrs["name"]
         for p in self.SUITE_NAME_PATTERNS:
-            match = p.match(raw_name)
-            if match:
+            if match := p.match(raw_name):
                 return match.group(1)
         return raw_name
 
@@ -191,10 +185,11 @@ def display_failures(collections):
     failures = []
     for collection in collections:
         for suite in collection.suites:
-            for test in suite.tests:
-                if not test.failure:
-                    continue
-                failures.append((test.name, test.failure_msg))
+            failures.extend(
+                (test.name, test.failure_msg)
+                for test in suite.tests
+                if test.failure
+            )
 
     if not len(failures):
         return
@@ -213,10 +208,11 @@ def display_errors(collections):
     errors = []
     for collection in collections:
         for suite in collection.suites:
-            for test in suite.tests:
-                if not test.error:
-                    continue
-                errors.append((test.name, test.error_msg))
+            errors.extend(
+                (test.name, test.error_msg)
+                for test in suite.tests
+                if test.error
+            )
 
     if not len(errors):
         return
@@ -238,7 +234,7 @@ def display_skipped(collections):
             for test in suite.tests:
                 if not test.skipped:
                     continue
-                name = "%s - %s - %s" % (collection.name, suite.name, test.name)
+                name = f"{collection.name} - {suite.name} - {test.name}"
                 skipped.append((name, test.skipped_msg))
     if not skipped:
         return
@@ -290,8 +286,9 @@ def display_collections(collections, sort):
             num_failures,
             num_errors,
             num_skipped,
-            collection.name + "        ",
+            f"{collection.name}        ",
         )
+
         rows.append(cols)
 
     scol = 0
@@ -325,8 +322,9 @@ def display_suites(collections, count, sort):
                 suite.num_failures,
                 suite.num_errors,
                 suite.num_skipped,
-                collection.name + " - " + suite.name,
+                f"{collection.name} - {suite.name}",
             ]
+
             rows.append(cols)
 
     scol = 0
@@ -380,11 +378,11 @@ def main():
     if not args.collection:
         args.collection = ["eunit", "exunit", "mango", "javascript"]
 
-    collections = []
-    for (name, pattern) in TEST_COLLECTIONS.items():
-        if name.lower() not in args.collection:
-            continue
-        collections.append(TestCollection(name, pattern))
+    collections = [
+        TestCollection(name, pattern)
+        for name, pattern in TEST_COLLECTIONS.items()
+        if name.lower() in args.collection
+    ]
 
     if not args.ignore_failures:
         display_failures(collections)

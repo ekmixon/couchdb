@@ -48,7 +48,7 @@ def print_changed(file_name, line_number):
 def changes(dirs, scope):
     result = {}
     for directory in dirs:
-        result.update(changed_files(directory, scope))
+        result |= changed_files(directory, scope)
     return result
 
 def repositories(root):
@@ -86,10 +86,9 @@ def setup_argparse():
 def filter_stdin(regexp, changes):
     any_matches = False
     for line in iter(sys.stdin.readline, ''):
-        matches = re.match(regexp, line)
-        if matches:
-            file_name = matches.group('file_name')
-            line_number = int(matches.group('line'))
+        if matches := re.match(regexp, line):
+            file_name = matches['file_name']
+            line_number = int(matches['line'])
             if file_name in changes and line_number in changes[file_name]:
                 print(line, end='')
                 any_matches = True
@@ -112,10 +111,7 @@ def main():
     else:
         regexp = re.compile(opts.regexp)
         validate_regexp(regexp)
-        if filter_stdin(regexp, changes(repositories('.'), opts.scope)):
-            return 1
-        else:
-            return 0
+        return 1 if filter_stdin(regexp, changes(repositories('.'), opts.scope)) else 0
 
 if __name__ == "__main__":
     try:

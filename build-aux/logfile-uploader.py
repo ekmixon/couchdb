@@ -114,12 +114,13 @@ def upload_logs():
         # ancient versions of requests break if data is iterable
         fdata = f.read()
         req2 = requests.put(
-            COUCH_URL + "/" + doc["_id"] + "/" + TARFILE,
+            f"{COUCH_URL}/" + doc["_id"] + "/" + TARFILE,
             headers={"Content-type": "application/x-gtar"},
             auth=creds,
             params={"rev": req["rev"]},
             data=fdata,
         )
+
     req2.raise_for_status()
     return req2
 

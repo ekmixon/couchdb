@@ -24,7 +24,7 @@ import limit_docs
 
 
 def random_db_name():
-    return "mango_test_" + uuid.uuid4().hex
+    return f"mango_test_{uuid.uuid4().hex}"
 
 
 def has_text_service():
@@ -38,7 +38,7 @@ def get_from_environment(key, default):
 
 # add delay functionality
 def delay(n=5, t=0.5):
-    for i in range(0, n):
+    for _ in range(n):
         time.sleep(t)
 
 
@@ -51,7 +51,7 @@ class Database(object):
         user="adm",
         password="pass",
     ):
-        root_url = get_from_environment("COUCH_HOST", "http://{}:{}".format(host, port))
+        root_url = get_from_environment("COUCH_HOST", f"http://{host}:{port}")
         auth_header = get_from_environment("COUCH_AUTH_HEADER", None)
         user = get_from_environment("COUCH_USER", user)
         password = get_from_environment("COUCH_PASSWORD", password)
@@ -71,7 +71,7 @@ class Database(object):
 
     @property
     def url(self):
-        return "{}/{}".format(self.root_url, self.dbname)
+        return f"{self.root_url}/{self.dbname}"
 
     def path(self, parts):
         if isinstance(parts, ("".__class__, "".__class__)):
@@ -168,9 +168,7 @@ class Database(object):
         return created
 
     def wait_for_built_indexes(self):
-        while True:
-            if all(idx["build_status"] == "ready" for idx in self.list_indexes()):
-                break
+        while any(idx["build_status"] != "ready" for idx in self.list_indexes()):
             delay(t=0.2)
 
     def create_text_index(
@@ -209,10 +207,10 @@ class Database(object):
 
     def list_indexes(self, limit="", skip=""):
         if limit != "":
-            limit = "limit=" + str(limit)
+            limit = f"limit={str(limit)}"
         if skip != "":
-            skip = "skip=" + str(skip)
-        r = self.sess.get(self.path("_index?" + limit + ";" + skip))
+            skip = f"skip={str(skip)}"
+        r = self.sess.get(self.path(f"_index?{limit};{skip}"))
         r.raise_for_status()
         return r.json()["indexes"]
 
@@ -222,7 +220,7 @@ class Database(object):
 
         ddocid = ddocid.replace("%2F", "/")
         if not ddocid.startswith("_design/"):
-            ddocid = "_design/" + ddocid
+            ddocid = f"_design/{ddocid}"
 
         if name is None:
             return [i for i in self.list_indexes() if i["ddoc"] == ddocid]
@@ -280,36 +278,27 @@ class Database(object):
         if executionStats == True:
             body["execution_stats"] = True
         body = json.dumps(body)
-        if explain:
-            path = self.path("_explain")
-        else:
-            path = self.path("_find")
+        path = self.path("_explain") if explain else self.path("_find")
         r = self.sess.post(path, data=body)
         r.raise_for_status()
-        if explain or return_raw:
-            return r.json()
-        else:
-            return r.json()["docs"]
+        return r.json() if explain or return_raw else r.json()["docs"]
 
     def find_one(self, *args, **kwargs):
         results = self.find(*args, **kwargs)
         if len(results) > 1:
             raise RuntimeError("Multiple results for Database.find_one")
-        if len(results):
-            return results[0]
-        else:
-            return None
+        return results[0] if len(results) else None
 
 
 class UsersDbTests(unittest.TestCase):
     @classmethod
-    def setUpClass(klass):
-        klass.db = Database("_users")
-        user_docs.setup_users(klass.db)
+    def setUpClass(cls):
+        cls.db = Database("_users")
+        user_docs.setup_users(cls.db)
 
     @classmethod
-    def tearDownClass(klass):
-        user_docs.teardown_users(klass.db)
+    def tearDownClass(cls):
+        user_docs.teardown_users(cls.db)
 
     def setUp(self):
         self.db = self.__class__.db
@@ -317,13 +306,13 @@ class UsersDbTests(unittest.TestCase):
 
 class DbPerClass(unittest.TestCase):
     @classmethod
-    def setUpClass(klass):
-        klass.db = Database(random_db_name())
-        klass.db.create(q=1, n=1)
+    def setUpClass(cls):
+        cls.db = Database(random_db_name())
+        cls.db.create(q=1, n=1)
 
     @classmethod
-    def tearDownClass(klass):
-        klass.db.delete()
+    def tearDownClass(cls):
+        cls.db.delete()
 
     def setUp(self):
         self.db = self.__class__.db
@@ -333,18 +322,18 @@ class UserDocsTests(DbPerClass):
     INDEX_TYPE = "json"
 
     @classmethod
-    def setUpClass(klass):
-        super(UserDocsTests, klass).setUpClass()
-        user_docs.setup(klass.db)
+    def setUpClass(cls):
+        super(UserDocsTests, cls).setUpClass()
+        user_docs.setup(cls.db)
 
 
 class UserDocsTestsNoIndexes(DbPerClass):
     INDEX_TYPE = "special"
 
     @classmethod
-    def setUpClass(klass):
-        super(UserDocsTestsNoIndexes, klass).setUpClass()
-        user_docs.setup(klass.db, index_type=klass.INDEX_TYPE)
+    def setUpClass(cls):
+        super(UserDocsTestsNoIndexes, cls).setUpClass()
+        user_docs.setup(cls.db, index_type=cls.INDEX_TYPE)
 
 
 class UserDocsTextTests(DbPerClass):
@@ -353,28 +342,28 @@ class UserDocsTextTests(DbPerClass):
     FIELDS = None
 
     @classmethod
-    def setUpClass(klass):
-        super(UserDocsTextTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(UserDocsTextTests, cls).setUpClass()
         if has_text_service():
             user_docs.setup(
-                klass.db,
-                index_type=klass.INDEX_TYPE,
-                default_field=klass.DEFAULT_FIELD,
-                fields=klass.FIELDS,
+                cls.db,
+                index_type=cls.INDEX_TYPE,
+                default_field=cls.DEFAULT_FIELD,
+                fields=cls.FIELDS,
             )
 
 
 class FriendDocsTextTests(DbPerClass):
     @classmethod
-    def setUpClass(klass):
-        super(FriendDocsTextTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(FriendDocsTextTests, cls).setUpClass()
         if has_text_service():
-            friend_docs.setup(klass.db, index_type="text")
+            friend_docs.setup(cls.db, index_type="text")
 
 
 class LimitDocsTextTests(DbPerClass):
     @classmethod
-    def setUpClass(klass):
-        super(LimitDocsTextTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(LimitDocsTextTests, cls).setUpClass()
         if has_text_service():
-            limit_docs.setup(klass.db, index_type="text")
+            limit_docs.setup(cls.db, index_type="text")

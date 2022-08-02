@@ -190,11 +190,12 @@ class IndexCrudTests(mango.DbPerClass):
         ret = self.db.create_index(fields, name="idx_03")
         assert ret is True
 
-        docids = []
+        docids = [
+            idx["ddoc"]
+            for idx in self.db.list_indexes()
+            if idx["ddoc"] is not None
+        ]
 
-        for idx in self.db.list_indexes():
-            if idx["ddoc"] is not None:
-                docids.append(idx["ddoc"])
 
         docids.append("_design/this_is_not_an_index_name")
 
@@ -209,7 +210,7 @@ class IndexCrudTests(mango.DbPerClass):
 
     def test_recreate_index(self):
         pre_indexes = self.db.list_indexes()
-        for i in range(5):
+        for _ in range(5):
             ret = self.db.create_index(["bing"], name="idx_recreate")
             assert ret is True
             for idx in self.db.list_indexes():

@@ -219,8 +219,8 @@ class IndexSelectionTests:
 
 class JSONIndexSelectionTests(mango.UserDocsTests, IndexSelectionTests):
     @classmethod
-    def setUpClass(klass):
-        super(JSONIndexSelectionTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(JSONIndexSelectionTests, cls).setUpClass()
 
     def test_uses_all_docs_when_fields_do_not_match_selector(self):
         # index exists on ["company", "manager"] but not ["company"]
@@ -252,10 +252,10 @@ class JSONIndexSelectionTests(mango.UserDocsTests, IndexSelectionTests):
 @unittest.skipUnless(mango.has_text_service(), "requires text service")
 class TextIndexSelectionTests(mango.UserDocsTests):
     @classmethod
-    def setUpClass(klass):
-        super(TextIndexSelectionTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(TextIndexSelectionTests, cls).setUpClass()
         if mango.has_text_service():
-            user_docs.add_text_indexes(klass.db, {})
+            user_docs.add_text_indexes(cls.db, {})
 
     def test_with_text(self):
         resp = self.db.find(
@@ -318,11 +318,11 @@ class TextIndexSelectionTests(mango.UserDocsTests):
 @unittest.skipUnless(mango.has_text_service(), "requires text service")
 class MultiTextIndexSelectionTests(mango.UserDocsTests):
     @classmethod
-    def setUpClass(klass):
-        super(MultiTextIndexSelectionTests, klass).setUpClass()
+    def setUpClass(cls):
+        super(MultiTextIndexSelectionTests, cls).setUpClass()
         if mango.has_text_service():
-            klass.db.create_text_index(ddoc="foo", analyzer="keyword")
-            klass.db.create_text_index(ddoc="bar", analyzer="email")
+            cls.db.create_text_index(ddoc="foo", analyzer="keyword")
+            cls.db.create_text_index(ddoc="bar", analyzer="email")
 
     def test_fallback_to_json_with_multi_text(self):
         resp = self.db.find(

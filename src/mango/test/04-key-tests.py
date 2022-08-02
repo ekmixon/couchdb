@@ -45,12 +45,12 @@ TEST_DOCS = [
 @unittest.skipUnless(mango.has_text_service(), "requires text service")
 class KeyTests(mango.DbPerClass):
     @classmethod
-    def setUpClass(klass):
-        super(KeyTests, klass).setUpClass()
-        klass.db.save_docs(TEST_DOCS, w=3)
-        klass.db.create_index(["type"], ddoc="view")
+    def setUpClass(cls):
+        super(KeyTests, cls).setUpClass()
+        cls.db.save_docs(TEST_DOCS, w=3)
+        cls.db.create_index(["type"], ddoc="view")
         if mango.has_text_service():
-            klass.db.create_text_index(ddoc="text")
+            cls.db.create_text_index(ddoc="text")
 
     def run_check(self, query, check, fields=None, indexes=None):
         if indexes is None:

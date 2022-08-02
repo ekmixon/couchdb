@@ -17,6 +17,7 @@ Warning: this file needs to run from the CouchDB repo root.
 USAGE: ERLFMT_PATH=<path_to_erlfmt> python3 dev/format_check.py
 """
 
+
 import os
 import subprocess
 import sys
@@ -46,16 +47,13 @@ if __name__ == "__main__":
             stderr=subprocess.PIPE,
         )
         if run_result.returncode != 0:
-            # erlfmt sometimes returns a non-zero status code with no
-            # actual errors. This is a workaround
-            stderr_lines = [
+            if stderr_lines := [
                 line
                 for line in run_result.stderr.decode("utf-8").split("\n")
                 if line not in FILTERED_LINES
                 and not line.startswith("Formatting ")
                 and not line.startswith("[warn] ")
-            ]
-            if len(stderr_lines) > 0:
+            ]:
                 print("\n".join(stderr_lines), file=sys.stderr)
                 failed_checks += 1
     sys.exit(failed_checks)

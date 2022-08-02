@@ -16,7 +16,7 @@ import unittest
 
 class OperatorTests:
     def assertUserIds(self, user_ids, docs):
-        user_ids_returned = list(d["user_id"] for d in docs)
+        user_ids_returned = [d["user_id"] for d in docs]
         user_ids.sort()
         user_ids_returned.sort()
         self.assertEqual(user_ids, user_ids_returned)
